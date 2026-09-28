@@ -37,6 +37,8 @@ void key_buffer_put(int c)
     int n = (khead + 1) % 64;
     if (n != ktail) { kbuf[khead] = c; khead = n; }
 }
+void key_buffer_flush(void) { ktail = khead; }
+
 int key_buffer_get(void)
 {
     if (ktail == khead) return -1;

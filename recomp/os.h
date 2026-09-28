@@ -27,6 +27,7 @@ extern int quit_requested, escape_pressed;
 int  key_buffer_get(void);
 void display_set_mouse(int x, int y);             /* OS_Word 21,3 */
 void key_buffer_put(int c);
+void key_buffer_flush(void);
 void display_screenshot(const uint8_t *pix, int width, const char *path);
 extern int screenshot_requested;                      /* -1 if empty */
 /* sound.c */

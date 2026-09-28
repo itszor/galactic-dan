@@ -420,12 +420,15 @@ static void os_byte(void)
     }
     if (op == 19) { if (interactive) wait_vsync(); else monotonic++; return; }
     if (interactive && op >= 124 && op <= 126) {       /* clear / set / acknowledge Escape */
+        if (op == 126 && escape_pressed) key_buffer_flush();   /* escape side effect */
         if (op != 125) { if (escape_pressed) ev("escape_cleared", "ii", op, swi_pc - 4); escape_pressed = 0; }
         else escape_pressed = 1;
         R[1] = op == 126 ? 0xFF : R[1];
         return;
     }
     if (op == 135) { R[2] = 13; return; }
+    /* OS_Byte 15 (flush all / current input buffer), 21 (flush buffer r1; 0 = keyboard) */
+    if (interactive && (op == 15 || (op == 21 && R[1] == 0))) key_buffer_flush();
     ev("OS_Byte", "iii", op, R[1], R[2]);
 }
 
