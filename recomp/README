@@ -12,6 +12,9 @@ Galactic Dan - static recompilation to C
       --fullscreen=WxH[@Hz]    exclusive fullscreen: switch the monitor to the
                                closest real display mode (e.g. 1280x960@50)
       --list-modes             list the primary display's fullscreen modes
+      --no-sound               no audio
+      --wav=file               also/instead render the audio to a WAV file
+                               (headless: in step with emulated time)
       F11 / Alt+Enter toggles fullscreen.  The 4:3 picture is always
       letterboxed (bars at the sides on a widescreen monitor).
       --script=ms:action[:a:b],...   scripted input: click:x:y, release, move:dx:dy,
@@ -72,7 +75,20 @@ Playing
   Keys the game scans directly (internal key numbers): Shift, Ctrl, Alt, D, P,
   F, S, L, Tab, B, Insert, F1-F3; typed keys go to the key buffer, Escape
   raises one escape condition per press (auto-repeat ignored) - in play the
-  game treats Escape as "abort mission".  F12 saves screenshot-N.bmp.  No sound yet.
+  game treats Escape as "abort mission".  Adjust (right button) walks.
+
+Sound (sound.c)
+  The game's 13 voices (DESIST, CHORD, AAK, BOARD, CLUNK, ERROR, EXCELLENT,
+  LETSGO, STEP1, THANKS, UGH, GUN, EXPLOSION) are one-shot sample players
+  sharing one fill routine, so they are emulated at high level: each voice's
+  sample start/length is read from its GateOn code at Sound_InstallVoice;
+  Sound_Control/ControlPacked start a channel; attach, Sound_Stereo and
+  Sound_Volume are honoured; the mixer applies amplitude in the log domain
+  as the voice does, decodes VIDC 8-bit log samples (sign in bit 0, 3-bit
+  segment + 4-bit step, mu-law form) to 16-bit, pans and mixes 8 channels
+  at 48 kHz into an SDL3 audio stream.  Duration (1/20 s) cuts the sound off
+  as GateOff would.  Pitch -> rate: 256 * 261.63 * 2^((pitch-&4000)/4096) Hz
+  (&2500 = 20.8 kHz, the samples' recording rate).  F12 saves screenshot-N.bmp.  No sound yet.
 
 Two modes
   * test (--limit / --headless): instruction-count interrupts and scripted input,

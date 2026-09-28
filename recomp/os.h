@@ -29,4 +29,10 @@ void display_set_mouse(int x, int y);             /* OS_Word 21,3 */
 void key_buffer_put(int c);
 void display_screenshot(const uint8_t *pix, int width, const char *path);
 extern int screenshot_requested;                      /* -1 if empty */
+/* sound.c */
+int  sound_init_device(void);
+int  sound_init_wav(const char *path);
+void sound_render(int frames);                  /* headless: frames at 48kHz */
+void sound_swi(uint32_t b);
+void sound_close(void);
 #endif

@@ -53,7 +53,7 @@ static const char *outprefix = "recomp";
 static int interactive, full_os, interp_only;                 /* SDL window, real time / VDU+sprite drivers */
 static uint64_t next_tick_ns, next_vsync_ns, t0_ns;
 static int last_buttons;
-/* --script=ms:action[:args],...  actions: click:x:y (OS units), release,
+/* --script=ms:action[:args],...  actions: click:x:y (OS units), release, buttons:mask,
    move:dx:dy, key:inkey (held 200ms), type:ascii, shot, quit                         */
 static struct { uint64_t ms; char act[8]; int a, b; } script[1024];
 static int nscript, script_i, shots;
@@ -84,6 +84,7 @@ static void run_script(void)
         int x = script[script_i].a, y = script[script_i].b;
         if (!strcmp(a, "click")) { mouse_x = x; mouse_y = y; mouse_buttons = 4; }
         else if (!strcmp(a, "release")) mouse_buttons = 0;
+        else if (!strcmp(a, "buttons")) mouse_buttons = x;
         else if (!strcmp(a, "move")) { mouse_x += x; mouse_y += y; }
         else if (!strcmp(a, "esc")) escape_pressed = 1;
         else if (!strcmp(a, "key") && x >= 1 && x <= 128) { key_down[x - 1] = 1; key_release_ms[x] = ms + 200; }
@@ -236,6 +237,7 @@ static void rt_service(int vsync_now)
     if (now > next_vsync_ns + 20 * CS_NS) next_vsync_ns = now;
     while (now >= next_tick_ns) {
         next_tick_ns += CS_NS;
+        sound_render(480);                       /* --wav in interactive runs */
         call_vector(0x1C, 0, 0);
     }
     if (vsync_now || now >= next_vsync_ns) {
@@ -281,6 +283,7 @@ void irq_point(void)
     if (icount >= limit) finish("instruction limit");
     if (icount >= next_tick) {
         next_tick += TICK_STEPS;
+        sound_render(480);                       /* --wav: 1 cs of audio */
         call_vector(0x1C, 0, 0);
     }
     if (icount >= next_vsync) {
@@ -567,6 +570,7 @@ void swi(uint32_t n, uint32_t nextpc)
         const char *fmts[] = {"", "i", "ii", "iii", "iiii", "iiiii"};
         ev(name, fmts[nargs], R[0], R[1], R[2], R[3], R[4]);
         if (b == 0x40183) R[1] = voices++;
+        sound_swi(b);
         return;
     }
     char name[48]; sprintf(name, "unhandled_SWI_%x", n);
@@ -784,6 +788,7 @@ static void finish(const char *why)
         for (int k = 0; k < ISTAT; k++) if (istat[k].n)
             fprintf(stderr, "interp %08x %s %08x x%llu\n", istat[k].a, istat[k].why ? "smc-form" : "no-entry",
                     istat[k].why, (unsigned long long)istat[k].n);
+    sound_close();
     if (vdu_unhandled) fprintf(stderr, "VDU: %u unhandled codes/characters\n", vdu_unhandled);
     fprintf(stderr, "stopped: %s after %llu instructions (%llu interpreted, %llu SMC stores noted)\n",
             why, (unsigned long long)icount, (unsigned long long)interp_count,
@@ -795,7 +800,8 @@ int main(int argc, char **argv)
 {
     const char *image = "../extracted/GalacticDan_8000,ff8";
     int scale = 4, headless = 0, no_title = 0;
-    const char *fs = NULL;
+    const char *fs = NULL, *wavpath = NULL;
+    int no_sound = 0;
     for (int k = 1; k < argc; k++)
         if (!strncmp(argv[k], "--limit=", 8) || !strcmp(argv[k], "--headless")) headless = 1;
     interactive = full_os = !headless;
@@ -806,6 +812,8 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[k], "--full-os")) full_os = 1;
         else if (!strcmp(argv[k], "--no-title")) no_title = 1;
         else if (!strcmp(argv[k], "--fullscreen")) fs = "";
+        else if (!strcmp(argv[k], "--no-sound")) no_sound = 1;
+        else if (!strncmp(argv[k], "--wav=", 6)) wavpath = argv[k] + 6;
         else if (!strncmp(argv[k], "--fullscreen=", 13)) fs = argv[k] + 13;
         else if (!strcmp(argv[k], "--list-modes")) { display_list_modes(); return 0; }
         else if (!strncmp(argv[k], "--scale=", 8)) scale = atoi(argv[k] + 8);
@@ -827,8 +835,10 @@ int main(int argc, char **argv)
     img_end = recomp_img_end;
     if (interactive) {
         if (!display_init(scale, fs)) return 1;
+        if (!no_sound && !wavpath) sound_init_device();
         t0_ns = next_tick_ns = next_vsync_ns = display_ticks_ns();
     }
+    if (wavpath && !sound_init_wav(wavpath)) fprintf(stderr, "cannot write %s\n", wavpath);
     if (full_os && !no_title) {
         run_loader_program("!TitlePic");       /* as !Run does before !RunImage */
         recompute_irq();
