@@ -11,8 +11,10 @@
  * Pitch: the standard oscillator adds a 16-bit increment into the top of a
  * 32-bit phase accumulator; &4000 is middle C (261.63 Hz) for a 256-byte
  * cycle, so a sample voice stepping by increment/256 bytes plays its data at
- *   256 * 261.63 * 2^((pitch - &4000) / 4096)  Hz
- * (&2500 -> 20.8 kHz, the rate the samples were recorded at).
+ *   256 * 261.63 * 2^((pitch - &4000) / 4096) * 48 / period  Hz
+ * where period is the Sound_Configure sample period (the pitch table is for
+ * the default 48us).  The game uses 96us, so &2500 -> 10.4 kHz: STEP1 (5000
+ * bytes, duration 0.5 s) then lasts 0.48 s, LETSGO 0.98 s of its 1.3 s.
  */
 #include <SDL3/SDL.h>
 #include <stdio.h>
@@ -34,6 +36,7 @@ static struct chan {
 } ch[NCHAN + 1];
 static int16_t linear[128];             /* log magnitude -> linear */
 static int master = 127, enabled = 1, ready;
+static int period_us = 48;              /* Sound_Configure sample period per channel */
 static SDL_AudioStream *stream;
 static FILE *wav;
 static uint32_t wav_frames;
@@ -205,7 +208,9 @@ static void control(int c, int32_t amp, uint32_t pitch, uint32_t dur)
     if (!enabled || !k->voice || !voices[k->voice].len) { k->active = 0; return; }
     double p = pitch >= 0x100 ? (double)(pitch & 0x7FFF)
                               : 0x4000 + ((double)pitch - 53) * 4096.0 / 48.0;   /* BBC pitch */
-    double src = 256.0 * 261.63 * pow(2.0, (p - 0x4000) / 4096.0);
+    /* The pitch table is for the default 48us period: at other periods the
+       same increments are applied per (slower or faster) channel sample. */
+    double src = 256.0 * 261.63 * pow(2.0, (p - 0x4000) / 4096.0) * 48.0 / period_us;
     k->amp = logamp;
     k->pos = 0;
     k->step = (uint64_t)(src / RATE * 4294967296.0);
@@ -220,6 +225,7 @@ void sound_swi(uint32_t b)
     if (!ready) return;
     lock();
     switch (b) {
+    case 0x40140: if (R[2]) period_us = R[2]; break;        /* Sound_Configure */
     case 0x40141: if (R[0] == 1) enabled = 0; else if (R[0] == 2) enabled = 1; break;
     case 0x40142: if (R[0] >= 1 && R[0] <= NCHAN && (int32_t)R[1] != -128) {
                       int p = (int32_t)R[1]; ch[R[0]].pan = p < -127 ? -127 : p > 127 ? 127 : p; }

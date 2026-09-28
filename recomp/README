@@ -87,8 +87,9 @@ Sound (sound.c)
   as the voice does, decodes VIDC 8-bit log samples (sign in bit 0, 3-bit
   segment + 4-bit step, mu-law form) to 16-bit, pans and mixes 8 channels
   at 48 kHz into an SDL3 audio stream.  Duration (1/20 s) cuts the sound off
-  as GateOff would.  Pitch -> rate: 256 * 261.63 * 2^((pitch-&4000)/4096) Hz
-  (&2500 = 20.8 kHz, the samples' recording rate).  F12 saves screenshot-N.bmp.  No sound yet.
+  as GateOff would.  Pitch -> rate: 256 * 261.63 * 2^((pitch-&4000)/4096)
+  * 48/period Hz, period being Sound_Configure's sample period (the game
+  sets 96us, so its usual pitch &2500 plays at 10.4 kHz).  F12 saves screenshot-N.bmp.  No sound yet.
 
 Two modes
   * test (--limit / --headless): instruction-count interrupts and scripted input,
