@@ -19,6 +19,8 @@ static int qwant, qhave;
 static int gfg_col = 63, gbg_col = 0, gfg_act, gbg_act, tfg_col = 63, tbg_col = 0;
 static int tint_tfg = 3, tint_tbg, tint_gfg = 3, tint_gbg;
 static int ox, oy;                              /* graphics origin (OS units) */
+int vdu_mode = 13;                              /* 13: 320x256, 15: 640x256 (both 8bpp) */
+static int scr_w = 320, xeig = 2;
 static int wl = 0, wb = 0, wr = 319, wt = 255;  /* graphics window (pixels, y down) */
 static int cx, cy, px_, py_;                    /* last two points (absolute OS units) */
 unsigned vdu_unhandled;
@@ -37,7 +39,7 @@ static uint8_t colour_byte(int c, int tint)
 static void pset(int x, int y, int fg)          /* pixel coords, y down */
 {
     if (x < wl || x > wr || y < wb || y > wt) return;
-    uint8_t *p = bankmem() + y * 320 + x;
+    uint8_t *p = bankmem() + y * scr_w + x;
     int act = fg ? gfg_act : gbg_act;
     uint8_t c = fg ? colour_byte(gfg_col, tint_gfg) : colour_byte(gbg_col, tint_gbg);
     switch (act & 7) {
@@ -49,7 +51,7 @@ static void pset(int x, int y, int fg)          /* pixel coords, y down */
     default: break;
     }
 }
-static int tox(int x) { return x >> 2; }
+static int tox(int x) { return x >> xeig; }
 static int toy(int y) { return 255 - (y >> 2); }
 
 static void hline(int x0, int x1, int y, int fg)
@@ -112,15 +114,15 @@ static int s16(int i) { return (int16_t)(qbuf[i] | qbuf[i + 1] << 8); }
 
 static void clear_rect(int x0, int y0, int x1, int y1, uint8_t c)
 {
-    for (int y = y0; y <= y1; y++) memset(bankmem() + y * 320 + x0, c, x1 - x0 + 1);
+    for (int y = y0; y <= y1; y++) memset(bankmem() + y * scr_w + x0, c, x1 - x0 + 1);
 }
 
-static void reset_windows(void) { wl = 0; wb = 0; wr = 319; wt = 255; ox = oy = 0; }
+static void reset_windows(void) { wl = 0; wb = 0; wr = scr_w - 1; wt = 255; ox = oy = 0; }
 
 static void do_vdu(int code)
 {
     switch (code) {
-    case 12: clear_rect(0, 0, 319, 255, colour_byte(tbg_col, tint_tbg)); break;
+    case 12: clear_rect(0, 0, scr_w - 1, 255, colour_byte(tbg_col, tint_tbg)); break;
     case 16: clear_rect(wl, wb, wr, wt, colour_byte(gbg_col, tint_gbg)); break;
     case 17: { int c = qbuf[0]; if (c & 128) tbg_col = c & 63; else tfg_col = c & 63; break; }
     case 18: { int a = qbuf[0], c = qbuf[1];
@@ -128,7 +130,9 @@ static void do_vdu(int code)
                break; }
     case 20: tfg_col = gfg_col = 63; tbg_col = gbg_col = 0; gfg_act = gbg_act = 0;
              tint_tfg = tint_gfg = 3; tint_tbg = tint_gbg = 0; break;
-    case 22: reset_windows(); tfg_col = gfg_col = 63; tbg_col = gbg_col = 0;
+    case 22: vdu_mode = qbuf[0] & 127;
+             if (vdu_mode == 15) { scr_w = 640; xeig = 1; } else { vdu_mode = 13; scr_w = 320; xeig = 2; }
+             reset_windows(); tfg_col = gfg_col = 63; tbg_col = gbg_col = 0;
              tint_tfg = tint_gfg = 3; tint_tbg = tint_gbg = 0;
              memset(MEM + os_screen_base(), 0, 0x28000); cx = cy = px_ = py_ = 0; break;
     case 23:
@@ -140,11 +144,11 @@ static void do_vdu(int code)
         break;
     case 24: {                                   /* graphics window, OS units incl. origin */
         int l = tox(s16(0) + ox), b = toy(s16(2) + oy), r = tox(s16(4) + ox), t = toy(s16(6) + oy);
-        wl = l < 0 ? 0 : l; wr = r > 319 ? 319 : r; wb = t < 0 ? 0 : t; wt = b > 255 ? 255 : b;
+        wl = l < 0 ? 0 : l; wr = r > scr_w - 1 ? scr_w - 1 : r; wb = t < 0 ? 0 : t; wt = b > 255 ? 255 : b;
         break;
     }
     case 25: plot(qbuf[0], s16(1), s16(3)); break;
-    case 26: reset_windows(); break;
+    case 26: reset_windows(); cx = cy = px_ = py_ = 0; break;   /* also homes the graphics cursor */
     case 29: ox = s16(0); oy = s16(2); break;
     default: break;                              /* 19 palette, 28 text window, cursor ops... */
     }
@@ -199,7 +203,7 @@ static void put_sprite(uint32_t s, int x, int y, int action)
         if (yy < wb || yy > wt) continue;
         const uint8_t *src = MEM + img + r * wwords * 4 + first / 8;
         const uint8_t *msk = MEM + mask + r * wwords * 4 + first / 8;
-        uint8_t *dst = bankmem() + yy * 320;
+        uint8_t *dst = bankmem() + yy * scr_w;
         for (int c = 0; c < wpx; c++) {
             int xx = left + c;
             if (xx < wl || xx > wr) continue;
@@ -223,6 +227,9 @@ int sprite_op_full(void)
     uint32_t spr = 0;
     if ((R[0] & 0x300) == 0x100) spr = (op >= 24) ? find_sprite(area, R[2]) : 0;
     else if ((R[0] & 0x300) == 0x200) spr = R[2];
+    if (getenv("RECOMP_SPRDEBUG"))
+        fprintf(stderr, "SpriteOp %x area %x spr %x r3 %d r4 %d r5 %x cursor %d,%d origin %d,%d bank %x\n",
+                R[0], area, spr, (int)R[3], (int)R[4], R[5], cx, cy, ox, oy, os_write_bank_addr());
     switch (op) {
     case 9:                                      /* initialise area */
         *(uint32_t *)(MEM + area + 4) = 0;

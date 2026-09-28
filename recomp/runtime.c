@@ -50,7 +50,7 @@ static uint8_t vdu[1 << 20];
 static size_t nvdu;
 static uint64_t interp_count, smc_count;
 static const char *outprefix = "recomp";
-static int interactive, full_os;                 /* SDL window, real time / VDU+sprite drivers */
+static int interactive, full_os, interp_only;                 /* SDL window, real time / VDU+sprite drivers */
 static uint64_t next_tick_ns, next_vsync_ns, t0_ns;
 static int last_buttons;
 /* --script=ms:action[:args],...  actions: click:x:y (OS units), release,
@@ -85,6 +85,7 @@ static void run_script(void)
         if (!strcmp(a, "click")) { mouse_x = x; mouse_y = y; mouse_buttons = 4; }
         else if (!strcmp(a, "release")) mouse_buttons = 0;
         else if (!strcmp(a, "move")) { mouse_x += x; mouse_y += y; }
+        else if (!strcmp(a, "esc")) escape_pressed = 1;
         else if (!strcmp(a, "key") && x >= 1 && x <= 128) { key_down[x - 1] = 1; key_release_ms[x] = ms + 200; }
         else if (!strcmp(a, "type")) key_buffer_put(x);
         else if (!strcmp(a, "shot")) screenshot_requested = 1;
@@ -105,6 +106,8 @@ static struct { int inkey; uint64_t from, to; } keys[] = {{99, 6500000, 6600000}
 static unsigned nkeys = 1;
 
 static void finish(const char *why) __attribute__((noreturn));
+static int hostpath(const char *name, char *out);
+static long load_file(const char *path, uint32_t addr);
 
 /* ---------------------------------------------------------------- logging */
 static void ev(const char *name, const char *fmt, ...)
@@ -137,14 +140,14 @@ static void interp_step(void);
 void call_addr(uint32_t a)
 {
     if (a == RETURN_TO_OS) finish("returned to OS");
-    fn_t f = (a >= LOAD && a < img_end) ? entry_tab[(a - LOAD) >> 2] : 0;
+    fn_t f = (!interp_only && a >= LOAD && a < img_end) ? entry_tab[(a - LOAD) >> 2] : 0;
     if (f) { f(a); return; }
     /* not a compiled entry point: interpret until we reach one */
     do {
         interp_step();
         a = npc;
         if (a == RETURN_TO_OS || a == HANDLER_RET) return;
-    } while (!(a >= LOAD && a < img_end && entry_tab[(a - LOAD) >> 2]));
+    } while (interp_only || !(a >= LOAD && a < img_end && entry_tab[(a - LOAD) >> 2]));
 }
 
 static void run_until(uint32_t stop)
@@ -201,6 +204,31 @@ static void call_vector(unsigned vec, int nregs, const uint32_t *regs)
     npc = snpc;
 }
 
+static const uint8_t *displayed(void)
+{
+    return MEM + SCREEN + (vdu_mode == 15 ? 0 : display_bank * 0x14000);
+}
+
+/* Run a loader-stage program (e.g. !TitlePic) with the interpreter before
+   the game: it overlaps the game's addresses, so nothing compiled is used. */
+static void run_loader_program(const char *name)
+{
+    char path[2048];
+    if (!hostpath(name, path)) return;
+    long n = load_file(path, LOAD);
+    if (n <= 0) return;
+    uint32_t saved[16];
+    memcpy(saved, R, sizeof R);
+    R[13] = 0xA8000; R[14] = RETURN_TO_OS; R[12] = 0;
+    npc = LOAD;
+    interp_only = 1;
+    run_until(RETURN_TO_OS);
+    interp_only = 0;
+    memset(MEM + LOAD, 0, n);
+    memcpy(R, saved, sizeof R);
+    NF = ZF = CF = VF = 0;
+}
+
 static void rt_service(int vsync_now)
 {
     uint64_t now = display_ticks_ns();
@@ -217,12 +245,12 @@ static void rt_service(int vsync_now)
         if (screenshot_requested) {
             char fn[64];
             snprintf(fn, sizeof fn, "screenshot-%d.bmp", ++shots);
-            display_screenshot(MEM + SCREEN + display_bank * 0x14000, fn);
+            display_screenshot(displayed(), vdu_mode == 15 ? 640 : 320, fn);
             fprintf(stderr, "saved %s\n", fn);
             screenshot_requested = 0;
         }
         if (quit_requested) finish("window closed");
-        display_present(MEM + SCREEN + display_bank * 0x14000);
+        display_present(displayed(), vdu_mode == 15 ? 640 : 320);
         monotonic += 2;
         uint32_t r[2] = {4, 0};
         call_vector(0x10, 2, r);
@@ -349,6 +377,7 @@ static uint32_t vduvar(uint32_t v)
     }
 }
 
+static uint32_t swi_pc;
 static void os_byte(void)
 {
     uint32_t op = R[0] & 0xFF;
@@ -387,7 +416,12 @@ static void os_byte(void)
         return;
     }
     if (op == 19) { if (interactive) wait_vsync(); else monotonic++; return; }
-    if (op == 126 && interactive) { escape_pressed = 0; R[1] = 0xFF; return; }
+    if (interactive && op >= 124 && op <= 126) {       /* clear / set / acknowledge Escape */
+        if (op != 125) { if (escape_pressed) ev("escape_cleared", "ii", op, swi_pc - 4); escape_pressed = 0; }
+        else escape_pressed = 1;
+        R[1] = op == 126 ? 0xFF : R[1];
+        return;
+    }
     if (op == 135) { R[2] = 13; return; }
     ev("OS_Byte", "iii", op, R[1], R[2]);
 }
@@ -458,6 +492,7 @@ void swi(uint32_t n, uint32_t nextpc)
 {
     uint32_t x = n & 0x20000, b = n & ~0x20000u;
     VF = 0;
+    swi_pc = nextpc;
     if (b >= 0x100 && b <= 0x1FF) { vdu_put(b - 0x100); return; }
     switch (b) {
     case 0: vdu_put(R[0]); return;
@@ -759,7 +794,7 @@ static void finish(const char *why)
 int main(int argc, char **argv)
 {
     const char *image = "../extracted/GalacticDan_8000,ff8";
-    int scale = 4, headless = 0;
+    int scale = 4, headless = 0, no_title = 0;
     for (int k = 1; k < argc; k++)
         if (!strncmp(argv[k], "--limit=", 8) || !strcmp(argv[k], "--headless")) headless = 1;
     interactive = full_os = !headless;
@@ -768,6 +803,7 @@ int main(int argc, char **argv)
         if (!strncmp(argv[k], "--limit=", 8)) limit = (uint64_t)strtod(argv[k] + 8, 0);
         else if (!strcmp(argv[k], "--headless")) ;
         else if (!strcmp(argv[k], "--full-os")) full_os = 1;
+        else if (!strcmp(argv[k], "--no-title")) no_title = 1;
         else if (!strncmp(argv[k], "--scale=", 8)) scale = atoi(argv[k] + 8);
         else if (!strncmp(argv[k], "--script=", 9)) parse_script(argv[k] + 9);
         else if (!strncmp(argv[k], "--app=", 6)) appdir = argv[k] + 6;
@@ -781,23 +817,27 @@ int main(int argc, char **argv)
     }
 #endif
     MEM = calloc(1, MEMSIZE);
+    char fn[512];
+    snprintf(fn, sizeof fn, "%s.events", outprefix);
+    evlog = fopen(fn, "w");
+    img_end = recomp_img_end;
+    if (interactive) {
+        if (!display_init(scale)) return 1;
+        t0_ns = next_tick_ns = next_vsync_ns = display_ticks_ns();
+    }
+    if (full_os && !no_title) {
+        run_loader_program("!TitlePic");       /* as !Run does before !RunImage */
+        recompute_irq();
+    }
     FILE *f = fopen(image, "rb");
     if (!f) { perror(image); return 1; }
     long n = fread(MEM + LOAD, 1, MEMSIZE - LOAD, f);
     fclose(f);
-    img_end = recomp_img_end;
     if (LOAD + n != img_end) fprintf(stderr, "warning: image size differs from compiled image\n");
     codemap = recomp_codemap;
     entry_tab = calloc((img_end - LOAD) / 4 + 1, sizeof(fn_t));
     for (unsigned k = 0; k < recomp_nentries; k++)
         entry_tab[(recomp_entries[k].a - LOAD) >> 2] = recomp_entries[k].f;
-    char fn[512];
-    snprintf(fn, sizeof fn, "%s.events", outprefix);
-    evlog = fopen(fn, "w");
-    if (interactive) {
-        if (!display_init(scale)) return 1;
-        t0_ns = next_tick_ns = next_vsync_ns = display_ticks_ns();
-    }
     R[13] = 0xA8000; R[14] = RETURN_TO_OS; R[12] = 0;
     npc = LOAD;
     recompute_irq();

@@ -7,6 +7,7 @@ Galactic Dan - static recompilation to C
   ./galdan --limit=N           headless deterministic test run (as used by compare.sh)
       --scale=K      window size 256K x 192K (default 4)
       --full-os      VDU drivers + sprite plotting also in headless runs
+      --no-title     skip the loader's title picture
       --script=ms:action[:a:b],...   scripted input: click:x:y, release, move:dx:dy,
                      key:inkey, type:ascii, shot, quit   (ms since start)
       --out=prefix --app=dir [image]
@@ -55,22 +56,27 @@ Operand handling (decided at translation time)
     shifted forms), with PSR() or'd in where ARM2 does so (Rm, Rs, stored PC)
 
 Playing
+  Start-up runs the loader's !TitlePic (mode 15 picture, 9 instructions,
+  interpreted) as !Run does, then the game, which waits ~5 s over it (click or
+  press a key to skip).
   Menu: point and click (PLAY / OPTIONS / PASSWORDS / QUIT).
   Briefing: Space.  In play the mouse steers: the game re-centres the pointer
   every frame (OS_Word 21,3), so while it does that the window captures the
   mouse (SDL relative mode); it is released again in the menus.
   Keys the game scans directly (internal key numbers): Shift, Ctrl, Alt, D, P,
   F, S, L, Tab, B, Insert, F1-F3; typed keys go to the key buffer, Escape
-  raises an escape condition.  F12 saves screenshot-N.bmp.  No sound yet.
+  raises one escape condition per press (auto-repeat ignored) - in play the
+  game treats Escape as "abort mission".  F12 saves screenshot-N.bmp.  No sound yet.
 
 Two modes
   * test (--limit / --headless): instruction-count interrupts and scripted input,
     OS calls behave exactly like asm/emu.py -> bit-exact with the oracle.
   * interactive (default): TickerV 100Hz and VSync 50Hz from the wall clock,
     OS_Byte 19 really waits for the next frame, each VSync presents the
-    displayed bank; VDU drivers (vdu.c: CLS/CLG, COLOUR/GCOL/tints, windows,
-    origin, PLOT move/line/point/triangle/rectangle) and OS_SpriteOp
-    9/24/28/34 on user sprite areas are active (--full-os).
+    displayed bank; VDU drivers (vdu.c: modes 13 and 15, CLS/CLG,
+    COLOUR/GCOL/tints, windows, origin, PLOT move/line/point/triangle/
+    rectangle; VDU 26 homes the graphics cursor) and OS_SpriteOp 9/24/28/34 on
+    user sprite areas are active (--full-os).  RECOMP_SPRDEBUG=1 logs sprite ops.
 
 Status
   Identical to the reference emulator (events, VDU, screen, registers) at 2M,

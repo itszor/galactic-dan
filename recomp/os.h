@@ -11,10 +11,11 @@ uint32_t os_screen_base(void);
 void vdu_write(uint8_t c);
 int  sprite_op_full(void);
 extern unsigned vdu_unhandled;
+extern int vdu_mode;
 
 /* display.c (SDL3) */
 int  display_init(int scale);
-void display_present(const uint8_t *pixels);   /* 320x256 bytes, mode 13 */
+void display_present(const uint8_t *pixels, int width);   /* width x 256 bytes, 8bpp */
 void display_poll(void);                        /* pump SDL events */
 uint64_t display_ticks_ns(void);
 void display_sleep_ns(uint64_t ns);
@@ -24,6 +25,6 @@ extern int quit_requested, escape_pressed;
 int  key_buffer_get(void);
 void display_set_mouse(int x, int y);             /* OS_Word 21,3 */
 void key_buffer_put(int c);
-void display_screenshot(const uint8_t *pix, const char *path);
+void display_screenshot(const uint8_t *pix, int width, const char *path);
 extern int screenshot_requested;                      /* -1 if empty */
 #endif

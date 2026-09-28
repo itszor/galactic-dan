@@ -96,7 +96,7 @@ int display_init(int scale)
         return 0;
     }
     SDL_SetRenderLogicalPresentation(ren, LW, LH, SDL_LOGICAL_PRESENTATION_LETTERBOX);
-    tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 320, 256);
+    tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 640, 256);
     SDL_SetTextureScaleMode(tex, SDL_SCALEMODE_NEAREST);
     for (int c = 0; c < 256; c++) {              /* default 256-colour palette */
         int t = c & 3;
@@ -108,19 +108,20 @@ int display_init(int scale)
     return 1;
 }
 
-void display_present(const uint8_t *pix)
+void display_present(const uint8_t *pix, int width)
 {
     uint32_t *out;
     int pitch;
     if (!SDL_LockTexture(tex, NULL, (void **)&out, &pitch)) return;
     for (int y = 0; y < 256; y++) {
         uint32_t *row = (uint32_t *)((uint8_t *)out + y * pitch);
-        for (int x = 0; x < 320; x++) row[x] = palette[pix[y * 320 + x]];
+        for (int x = 0; x < width; x++) row[x] = palette[pix[y * width + x]];
     }
     SDL_UnlockTexture(tex);
+    SDL_FRect src = {0, 0, (float)width, 256};
     SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
     SDL_RenderClear(ren);
-    SDL_RenderTexture(ren, tex, NULL, NULL);
+    SDL_RenderTexture(ren, tex, &src, NULL);
     SDL_RenderPresent(ren);
 }
 
@@ -159,7 +160,9 @@ void display_poll(void)
             if (e.key.scancode == SDL_SCANCODE_LALT || e.key.scancode == SDL_SCANCODE_RALT)
                 key_down[2] = down;
             if (down && e.key.scancode == SDL_SCANCODE_F12) { screenshot_requested = 1; break; }
-            if (down && e.key.scancode == SDL_SCANCODE_ESCAPE) escape_pressed = 1;
+            if (e.key.scancode == SDL_SCANCODE_ESCAPE) {
+                if (down && !e.key.repeat) escape_pressed = 1;   /* one condition per press */
+            }
             else if (down && !e.key.repeat) {
                 int c = ascii_for(e.key.scancode, (e.key.mod & SDL_KMOD_SHIFT) != 0);
                 if (c >= 0) key_buffer_put(c);
@@ -198,13 +201,13 @@ void display_poll(void)
 }
 
 /* save the displayed screen as BMP (F12, or --script shot) */
-void display_screenshot(const uint8_t *pix, const char *path)
+void display_screenshot(const uint8_t *pix, int width, const char *path)
 {
-    SDL_Surface *s = SDL_CreateSurface(320, 256, SDL_PIXELFORMAT_XRGB8888);
+    SDL_Surface *s = SDL_CreateSurface(width, 256, SDL_PIXELFORMAT_XRGB8888);
     if (!s) return;
     for (int y = 0; y < 256; y++) {
         uint32_t *row = (uint32_t *)((uint8_t *)s->pixels + y * s->pitch);
-        for (int x = 0; x < 320; x++) row[x] = palette[pix[y * 320 + x]];
+        for (int x = 0; x < width; x++) row[x] = palette[pix[y * width + x]];
     }
     SDL_SaveBMP(s, path);
     SDL_DestroySurface(s);
