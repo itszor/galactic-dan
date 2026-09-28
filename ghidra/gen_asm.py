@@ -545,7 +545,7 @@ cd "$(dirname "$0")"
 %(t)sld -Ttext=0x%(b)x -e _start --no-warn-rwx-segments -o galdan.elf galdan.o
 %(t)sobjcopy -O binary -j .text galdan.elf GalacticDan,ff8
 cmp GalacticDan,ff8 "%(img)s" && echo "IDENTICAL to original"
-''' % dict(t=TOOLS, b=base, img=os.path.abspath(path)))
+''' % dict(t=TOOLS, b=base, img=os.path.relpath(os.path.abspath(path), os.path.abspath(outdir))))
 
     fallback = set()
     for it in range(10):
