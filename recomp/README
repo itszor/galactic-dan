@@ -1,0 +1,80 @@
+Galactic Dan - static recompilation to C
+========================================
+
+  python3 gen_c.py --loops     translate the ARM code -> gen/*.c   (< 1 s)
+  make -j8                     build ./galdan                        (~45 s)
+  ./galdan                     play in an SDL3 window (real time)
+  ./galdan --limit=N           headless deterministic test run (as used by compare.sh)
+      --scale=K      window size 256K x 192K (default 4)
+      --full-os      VDU drivers + sprite plotting also in headless runs
+      --script=ms:action[:a:b],...   scripted input: click:x:y, release, move:dx:dy,
+                     key:inkey, type:ascii, shot, quit   (ms since start)
+      --out=prefix --app=dir [image]
+  ./compare.sh N               run the Python reference emulator (asm/emu.py)
+                               and ./galdan to N instructions; compare the SWI
+                               event log, VDU stream, screen memory, registers
+  make TRACE=1 ; RECOMP_TRACE=a:b ./galdan ...   per-instruction trace (rec.trace)
+  python3 ref_run.py N ref --trace=a:b           same from the emulator (ref.trace)
+
+Files
+  runtime.h    instruction macros, flags, shifter, memory access
+  runtime.c    dispatcher, interrupt injection, fallback interpreter, RISC OS stubs
+  gen_c.py     the translator (uses ../ghidra/gen_asm.py's final classification)
+  gen/         generated code: one C function per spider function, entry table,
+               code bitmap
+
+Model
+  * State: R[16], flags NF/ZF/CF/VF (0/1), MEM (64MB, image at &8000).  The
+    26-bit PSR is rebuilt (PSR()) only where the architecture exposes it.
+  * Each function is  void F_xxxx(uint32_t entry)  with a switch over its entry
+    labels (function start, return sites, branch/ADR targets, table targets).
+    Branches inside a function are gotos.  BL is a C call; after it the caller
+    checks npc == return address.
+  * Every other PC write stores npc and returns; callers that see an npc they
+    didn't expect return too, so control unwinds to the flat dispatcher
+    (run_until).  This is the setjmp/longjmp idea done with ordinary returns:
+    the C stack depth is bounded by the program's real call depth.
+  * Addresses with no compiled entry, and self-modified words in forms not seen
+    during analysis, go through a small ARM2 interpreter (port of arm2.py).
+  * Self-modifying sites: switch on the current instruction word between the
+    forms found by analysis; default -> interpreter.  Stores into other
+    compiled code are reported ("store to compiled code").
+  * Duff's devices: 8 of the 9 computed jumps into unrolled plotters are
+    replaced by loops over one block (entry offset -> trip count); the one whose
+    body contains a self-modified word stays a switch into straight-line code.
+  * Instruction counting is exact (I(a) prologue), and TickerV / VSync / mouse
+    events are injected at the same counts as asm/emu.py, so the Python
+    emulator is a bit-exact oracle.
+
+Operand handling (decided at translation time)
+  * immediates: pre-rotated; carry-out is a constant (bit 31) or CF (rot 0)
+  * immediate shifts: normalised (LSR/ASR #0 = #32, ROR #0 = RRX, LSL #0 = none)
+    -> SH_xxx / CY_xxx macros with constant amounts
+  * register shifts: shr_val() helper (arm2.py rules for amounts 0 / 32 / >32)
+  * r15 as operand: constant (instruction address + 8, or + 12 for register-
+    shifted forms), with PSR() or'd in where ARM2 does so (Rm, Rs, stored PC)
+
+Playing
+  Menu: point and click (PLAY / OPTIONS / PASSWORDS / QUIT).
+  Briefing: Space.  In play the mouse steers: the game re-centres the pointer
+  every frame (OS_Word 21,3), so while it does that the window captures the
+  mouse (SDL relative mode); it is released again in the menus.
+  Keys the game scans directly (internal key numbers): Shift, Ctrl, Alt, D, P,
+  F, S, L, Tab, B, Insert, F1-F3; typed keys go to the key buffer, Escape
+  raises an escape condition.  F12 saves screenshot-N.bmp.  No sound yet.
+
+Two modes
+  * test (--limit / --headless): instruction-count interrupts and scripted input,
+    OS calls behave exactly like asm/emu.py -> bit-exact with the oracle.
+  * interactive (default): TickerV 100Hz and VSync 50Hz from the wall clock,
+    OS_Byte 19 really waits for the next frame, each VSync presents the
+    displayed bank; VDU drivers (vdu.c: CLS/CLG, COLOUR/GCOL/tints, windows,
+    origin, PLOT move/line/point/triangle/rectangle) and OS_SpriteOp
+    9/24/28/34 on user sprite areas are active (--full-os).
+
+Status
+  Identical to the reference emulator (events, VDU, screen, registers) at 2M,
+  20M and 100M instructions of the standard scenario (menu -> PLAY -> Sector 1
+  briefing -> gameplay); 0 instructions fall back to the interpreter.
+  ~700M ARM instructions/second headless.  shot.py renders a <prefix>.screen
+  dump (both banks) to PNG.

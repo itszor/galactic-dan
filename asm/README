@@ -1,0 +1,44 @@
+Galactic Dan - relocatable assembly source
+==========================================
+
+galdan.s      GNU as source (-march=armv2a). ./build.sh reassembles it and checks
+              the result is byte-identical to ../extracted/GalacticDan_8000,ff8.
+regen.sh      regenerate galdan.s from the analysis (../ghidra/gen_asm.py).
+
+What "relocatable" means here
+-----------------------------
+Everything position-dependent is symbolic, so code/data can grow or shrink:
+  * branches, ADR, PC-relative LDR/STR           -> labels
+  * literal offsets (ldr rX,lit ; add rY,pc,rX)  -> .word target - (L_use + 8)
+  * workspace above the image (BSS, stack)        -> ws_XXXX = _image_end + n
+  * tables of PC-relative offsets (object/handler dispatch, voice generators,
+    string tables)                                -> .word target - base
+The game has no absolute pointers in its data (checked at run time).
+
+Limits the assembler enforces for you (you get an error, not a bad build):
+  * PC-relative LDR/STR reach +-4095 bytes: a literal can't move further than
+    that from its user.
+  * ADR immediates must stay encodable.
+Limits it can't enforce (commented in the source):
+  * Duff's-device jumps into unrolled plotters use immediate offsets: don't
+    edit inside the unrolled bodies.
+  * sub_866c uses the *address* of the string "statusbar" as a number (a latent
+    bug in the original), so moving that string changes a computed value.
+
+How it was verified
+-------------------
+emu.py        minimal RISC OS around ../extracted/tools/arm2.py: file loading,
+              VDU variables, sound stubs, TickerV/VSync/mouse events.
+provtrack.py  runs the original and records every image word used as an offset
+              relative to pc or a pc-derived address (-> dyn_*.json).
+difftest.py   runs the original and a padded rebuild in lock-step; checks the
+              PC stream, every memory address, SWI arguments, VDU output and
+              screen memory, modulo the padding.
+
+  ./regen.sh --pad=8080:24,97f4:44,13aa4:104,1ba38:84,22718:204,26968:14
+  python3 difftest.py ../extracted/GalacticDan_8000,ff8 ../asm_shifted/GalacticDan,ff8 \
+          8080:24,97f4:44,13aa4:104,1ba38:84,22718:204,26968:14 20e6
+
+Scenario (emu.SCENARIO): click PLAY, press Space at the Sector 1 briefing,
+play on; 20M instructions; ~33% of the reachable code executes.  Two
+different padded layouts both run identically for the whole 20M.

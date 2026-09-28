@@ -1,0 +1,18 @@
+Galactic Dan (RISC OS, 1992) - reverse engineering and static recompilation
+==========================================================================
+
+disk.img, *.adf/*.dsk   original and unprotected disc images
+extracted/              files from the disc; GalacticDan_8000,ff8 is the decrypted
+                        game (absolute, load/exec &8000); tools/ has the disc and
+                        protection tools and arm2.py (ARM2 emulator)
+ghidra/                 code/data classification and Ghidra import
+                          spider.py         recursive-descent + speculative code finder
+                          export_ghidra.py  spider -> galdan.json (+ .pickle cache)
+                          run_ghidra.sh     headless Ghidra import/analysis/decompile
+                          gen_asm.py        galdan.json -> relocatable GNU as source
+asm/                    galdan.s: reassembles byte-identically (build.sh) and is
+                        relocatable; emu.py / provtrack.py / difftest.py verify it
+                        (see asm/README)
+recomp/                 static recompilation to C with an SDL3 front end
+                        (see recomp/README):
+                          python3 gen_c.py --loops && make -j8 && ./galdan

@@ -1,0 +1,35 @@
+# Python / editors
+__pycache__/
+*.pyc
+*.swp
+
+# Ghidra database and headless output (./ghidra/run_ghidra.sh regenerates)
+ghidra/project/
+ghidra/out/galdan.c
+ghidra/out/headless.log
+ghidra/survey.txt
+ghidra/still.txt
+
+# Reassembly products (asm/build.sh) and relocation-test builds (asm/regen.sh --pad=...)
+asm/galdan.o
+asm/galdan.elf
+asm/GalacticDan,ff8
+asm_shifted/
+asm_shifted2/
+
+# Emulator / difftest run outputs
+asm/*.png
+asm/*.log
+asm/executed.json
+
+# Recompiler: generated C (python3 gen_c.py), objects, binary, run outputs
+recomp/gen/
+*.o
+recomp/galdan
+recomp/*.events
+recomp/*.vdu
+recomp/*.screen
+recomp/*.regs
+recomp/*.trace
+recomp/*.png
+recomp/screenshot-*.bmp
