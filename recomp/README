@@ -8,6 +8,12 @@ Galactic Dan - static recompilation to C
       --scale=K      window size 256K x 192K (default 4)
       --full-os      VDU drivers + sprite plotting also in headless runs
       --no-title     skip the loader's title picture
+      --fullscreen             borderless desktop fullscreen
+      --fullscreen=WxH[@Hz]    exclusive fullscreen: switch the monitor to the
+                               closest real display mode (e.g. 1280x960@50)
+      --list-modes             list the primary display's fullscreen modes
+      F11 / Alt+Enter toggles fullscreen.  The 4:3 picture is always
+      letterboxed (bars at the sides on a widescreen monitor).
       --script=ms:action[:a:b],...   scripted input: click:x:y, release, move:dx:dy,
                      key:inkey, type:ascii, shot, quit   (ms since start)
       --out=prefix --app=dir [image]

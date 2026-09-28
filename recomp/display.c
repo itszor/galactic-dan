@@ -5,6 +5,7 @@
  * key number (INKEY -(n+1)) and typed characters go to a small key buffer.
  */
 #include <SDL3/SDL.h>
+#include <stdio.h>
 #include <string.h>
 #include "os.h"
 
@@ -19,6 +20,8 @@ static uint32_t palette[256];
 static int kbuf[64], khead, ktail;
 static uint64_t last_setpos_ns;                 /* game re-centres the pointer: capture mouse */
 static int relative;
+static SDL_DisplayMode fs_mode;                 /* exclusive fullscreen mode, if chosen */
+static int fs_exclusive, fullscreen;
 #define MOUSE_SENS 2.0f                         /* OS units per host pixel in relative mode */
 
 void display_set_mouse(int x, int y)
@@ -84,7 +87,41 @@ static int internal_key(SDL_Scancode s)
     return -1;
 }
 
-int display_init(int scale)
+/* Fullscreen keeps the 4:3 picture: the logical presentation letterboxes it
+   (bars at the sides on a widescreen monitor).  Exclusive mode switches the
+   monitor to a real display mode; desktop mode just scales. */
+static void apply_fullscreen(void)
+{
+    if (fullscreen && fs_exclusive) SDL_SetWindowFullscreenMode(win, &fs_mode);
+    else SDL_SetWindowFullscreenMode(win, NULL);            /* borderless desktop */
+    SDL_SetWindowFullscreen(win, fullscreen);
+    SDL_SyncWindow(win);
+}
+
+void display_toggle_fullscreen(void)
+{
+    fullscreen = !fullscreen;
+    apply_fullscreen();
+}
+
+void display_list_modes(void)
+{
+    if (!SDL_Init(SDL_INIT_VIDEO)) { SDL_Log("SDL_Init: %s", SDL_GetError()); return; }
+    int n = 0;
+    SDL_DisplayID d = SDL_GetPrimaryDisplay();
+    const SDL_DisplayMode *cur = SDL_GetCurrentDisplayMode(d);
+    if (cur) printf("current: %dx%d @ %.2fHz (driver %s)\n", cur->w, cur->h, cur->refresh_rate,
+                    SDL_GetCurrentVideoDriver());
+    SDL_DisplayMode **m = SDL_GetFullscreenDisplayModes(d, &n);
+    for (int i = 0; i < n; i++)
+        printf("  %dx%d @ %.2fHz%s\n", m[i]->w, m[i]->h, m[i]->refresh_rate,
+               m[i]->pixel_density != 1.0f ? " (high density)" : "");
+    SDL_free(m);
+    SDL_Quit();
+}
+
+/* spec: NULL windowed, "" desktop fullscreen, "WxH[@Hz]" exclusive mode */
+int display_init(int scale, const char *fs)
 {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_Log("SDL_Init: %s", SDL_GetError());
@@ -96,6 +133,18 @@ int display_init(int scale)
         return 0;
     }
     SDL_SetRenderLogicalPresentation(ren, LW, LH, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+    if (fs) {
+        int w = 0, h = 0;
+        float hz = 0;
+        fullscreen = 1;
+        if (*fs && sscanf(fs, "%dx%d@%f", &w, &h, &hz) >= 2) {
+            if (SDL_GetClosestFullscreenDisplayMode(SDL_GetDisplayForWindow(win), w, h, hz, false, &fs_mode)) {
+                fs_exclusive = 1;
+                SDL_Log("fullscreen mode %dx%d @ %.2fHz", fs_mode.w, fs_mode.h, fs_mode.refresh_rate);
+            } else SDL_Log("no display mode near %s (%s); using desktop fullscreen", fs, SDL_GetError());
+        }
+        apply_fullscreen();
+    }
     tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 640, 256);
     SDL_SetTextureScaleMode(tex, SDL_SCALEMODE_NEAREST);
     for (int c = 0; c < 256; c++) {              /* default 256-colour palette */
@@ -160,6 +209,11 @@ void display_poll(void)
             if (e.key.scancode == SDL_SCANCODE_LALT || e.key.scancode == SDL_SCANCODE_RALT)
                 key_down[2] = down;
             if (down && e.key.scancode == SDL_SCANCODE_F12) { screenshot_requested = 1; break; }
+            if (e.key.scancode == SDL_SCANCODE_F11 ||
+                (e.key.scancode == SDL_SCANCODE_RETURN && (e.key.mod & SDL_KMOD_ALT))) {
+                if (down && !e.key.repeat) display_toggle_fullscreen();
+                break;                                      /* not passed to the game */
+            }
             if (e.key.scancode == SDL_SCANCODE_ESCAPE) {
                 if (down && !e.key.repeat) escape_pressed = 1;   /* one condition per press */
             }

@@ -795,6 +795,7 @@ int main(int argc, char **argv)
 {
     const char *image = "../extracted/GalacticDan_8000,ff8";
     int scale = 4, headless = 0, no_title = 0;
+    const char *fs = NULL;
     for (int k = 1; k < argc; k++)
         if (!strncmp(argv[k], "--limit=", 8) || !strcmp(argv[k], "--headless")) headless = 1;
     interactive = full_os = !headless;
@@ -804,6 +805,9 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[k], "--headless")) ;
         else if (!strcmp(argv[k], "--full-os")) full_os = 1;
         else if (!strcmp(argv[k], "--no-title")) no_title = 1;
+        else if (!strcmp(argv[k], "--fullscreen")) fs = "";
+        else if (!strncmp(argv[k], "--fullscreen=", 13)) fs = argv[k] + 13;
+        else if (!strcmp(argv[k], "--list-modes")) { display_list_modes(); return 0; }
         else if (!strncmp(argv[k], "--scale=", 8)) scale = atoi(argv[k] + 8);
         else if (!strncmp(argv[k], "--script=", 9)) parse_script(argv[k] + 9);
         else if (!strncmp(argv[k], "--app=", 6)) appdir = argv[k] + 6;
@@ -822,7 +826,7 @@ int main(int argc, char **argv)
     evlog = fopen(fn, "w");
     img_end = recomp_img_end;
     if (interactive) {
-        if (!display_init(scale)) return 1;
+        if (!display_init(scale, fs)) return 1;
         t0_ns = next_tick_ns = next_vsync_ns = display_ticks_ns();
     }
     if (full_os && !no_title) {
