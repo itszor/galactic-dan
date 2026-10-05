@@ -27,9 +27,13 @@ Galactic Dan - static recompilation to C
   python3 ref_run.py N ref --trace=a:b           same from the emulator (ref.trace)
 
 Files
-  runtime.h    instruction macros, flags, shifter, memory access
-  runtime.c    dispatcher, interrupt injection, fallback interpreter, RISC OS stubs
+  game.c       what the runtime needs to know about the game (struct
+               roger_config: files, mode 13, the headless scenario, !TitlePic...)
   gen_c.py     the translator (uses ../ghidra/gen_asm.py's final classification)
+  The runtime itself - CPU state and instruction macros (roger_cpu.h),
+  dispatcher, interrupts, fallback interpreter, the RISC OS emulation and the
+  SDL front end - is libroger (~/stuff/libroger, or make ROGER=dir), shared
+  with the other recompilations; it began as this directory's runtime.c.
   gen/         generated code: one C function per spider function, entry table,
                code bitmap
 
@@ -77,31 +81,34 @@ Playing
   raises one escape condition per press (auto-repeat ignored) - in play the
   game treats Escape as "abort mission".  Adjust (right button) walks.
 
-Sound (sound.c)
+Sound
   The game's 13 voices (DESIST, CHORD, AAK, BOARD, CLUNK, ERROR, EXCELLENT,
   LETSGO, STEP1, THANKS, UGH, GUN, EXPLOSION) are one-shot sample players
-  sharing one fill routine, so they are emulated at high level: each voice's
-  sample start/length is read from its GateOn code at Sound_InstallVoice;
-  Sound_Control/ControlPacked start a channel; attach, Sound_Stereo and
-  Sound_Volume are honoured; the mixer applies amplitude in the log domain
-  as the voice does, decodes VIDC 8-bit log samples (sign in bit 0, 3-bit
-  segment + 4-bit step, mu-law form) to 16-bit, pans and mixes 8 channels
-  at 48 kHz into an SDL3 audio stream.  Duration (1/20 s) cuts the sound off
-  as GateOff would.  Pitch -> rate: 256 * 261.63 * 2^((pitch-&4000)/4096)
-  * 48/period Hz, period being Sound_Configure's sample period (the game
-  sets 96us, so its usual pitch &2500 plays at 10.4 kHz).  F12 saves screenshot-N.bmp.  No sound yet.
+  sharing one fill routine (&261EC). libroger's sound system runs them as
+  the OS would: Instantiate (which takes the log amplitude table from the
+  Level 1 block Sound_Configure returns), GateOn (sample start/length into
+  the channel control block), Fill into the DMA buffer at the game's 96us
+  sample period, GateOff after the duration. Until 2026-10 they were
+  emulated at high level in a C mixer (sound.c, in git history), which read
+  each voice's sample from its GateOn code. F12 saves screenshot-N.bmp.
 
 Two modes
   * test (--limit / --headless): instruction-count interrupts and scripted input,
     OS calls behave exactly like asm/emu.py -> bit-exact with the oracle.
   * interactive (default): TickerV 100Hz and VSync 50Hz from the wall clock,
     OS_Byte 19 really waits for the next frame, each VSync presents the
-    displayed bank; VDU drivers (vdu.c: modes 13 and 15, CLS/CLG,
+    displayed bank; VDU drivers (libroger's vdu.c: any graphics mode, CLS/CLG,
     COLOUR/GCOL/tints, windows, origin, PLOT move/line/point/triangle/
     rectangle; VDU 26 homes the graphics cursor) and OS_SpriteOp 9/24/28/34 on
     user sprite areas are active (--full-os).  RECOMP_SPRDEBUG=1 logs sprite ops.
 
 Status
+  Since moving to libroger, the voice generators' code runs inside the
+  sound interrupt and takes instructions, which asm/emu.py doesn't model:
+  the two agree exactly up to the game's first sound (3.5 s into the
+  standard scenario); after it interrupts land at different instruction
+  counts and the runs diverge (with the voices switched off they stay
+  identical to the previous runtime's to 5000M instructions). Before:
   Identical to the reference emulator (events, VDU, screen, registers) at 2M,
   20M and 100M instructions of the standard scenario (menu -> PLAY -> Sector 1
   briefing -> gameplay); 0 instructions fall back to the interpreter.
