@@ -2,6 +2,12 @@ Galactic Dan - static recompilation to C
 ========================================
 
   python3 gen_c.py --loops     translate the ARM code -> gen/*.c   (< 1 s)
+  make regen                   the same from SuperSpider's analysis
+                               (../superspider/out/; make regen-ghidra: the
+                               spider + Ghidra one in ../ghidra)
+  make roots [LOG=file]        merge a --trace-gaps run's gap entries
+                               (untranslated.log) into ../superspider/galdan.roots
+                               for the next make regen
   make -j8                     build ./galdan                        (~45 s)
   ./galdan                     play in an SDL3 window (real time)
   ./galdan --limit=N           headless deterministic test run (as used by compare.sh)

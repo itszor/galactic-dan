@@ -3,9 +3,11 @@ at a time, using the macros in libroger's roger_cpu.h.
 
 Code/data classification, labels, call/return overrides, Duff's-device entry
 points and self-modification sites all come from the earlier analysis
-(ghidra/gen_asm.py + galdan.json + the spider pickle).
+(ghidra/gen_asm.py + galdan.json + the spider pickle): by default the
+spider + Ghidra one in ../ghidra, or SuperSpider's (make regen) given
+--json/--tsvdir.
 
-Usage: gen_c.py [--loops] [--files=N]
+Usage: gen_c.py [--loops] [--files=N] [--json=path] [--tsvdir=path] [--dyn=path,...]
 """
 import sys, os, re, json, pickle, collections
 
@@ -33,25 +35,26 @@ def h(v):
     return '0x%xu' % (v & M32)
 
 
-def load_analysis():
+def load_analysis(json_path, tsvdir, dyn):
     img = open(os.path.join(HERE, '..', 'extracted', 'GalacticDan_8000,ff8'), 'rb').read()
-    j = json.load(open(os.path.join(GH, 'galdan.json')))
-    sp = pickle.load(open(os.path.join(GH, 'galdan.json.pickle'), 'rb'))
+    j = json.load(open(json_path))
+    sp = pickle.load(open(json_path + '.pickle', 'rb'))
     names = {}
-    for line in open(os.path.join(GH, 'out', 'functions.tsv')).read().splitlines()[1:]:
+    for line in open(os.path.join(tsvdir, 'functions.tsv')).read().splitlines()[1:]:
         e = int(line.split('\t')[0], 16)
         if e < 0x10000000:
             names[e] = 'sub_%x' % e
     extra = set()
     strs = [(a, a + l) for a, l, t in j['strings']]
-    for line in open(os.path.join(GH, 'out', 'ghidra_only_code.txt')):
+    go = os.path.join(tsvdir, 'ghidra_only_code.txt')
+    for line in open(go) if os.path.exists(go) else ():
         s, e = (int(x, 16) for x in line.split('-'))
         words = range(s & ~3, e + 1, 4)
         if all(spider.valid_arm2(int.from_bytes(img[x - BASE:x - BASE + 4], 'little')) is None
                for x in words) and not any(a < e + 1 and s < b for a, b in strs):
             extra.update(words)
     g = gen_asm.Gen(img, BASE, j, sp, names, extra)
-    g.dyn = [os.path.join(HERE, '..', 'asm', f) for f in ('dyn_menu.json', 'dyn_game.json')]
+    g.dyn = dyn
     g.notes = {}
     g.pads = {}
     g.inst_fallback = set()
@@ -62,8 +65,8 @@ def load_analysis():
 
 
 class Recomp:
-    def __init__(self, loops=False):
-        self.img, self.j, self.sp, self.g = load_analysis()
+    def __init__(self, json_path, tsvdir, dyn=(), loops=False):
+        self.img, self.j, self.sp, self.g = load_analysis(json_path, tsvdir, list(dyn))
         self.end = BASE + len(self.img)
         self.code = set(self.g.code)
         self.loops = loops
@@ -114,7 +117,10 @@ class Recomp:
         return (a + 8 + off * 4) & 0x3FFFFFC
 
     def find_leaders(self):
-        L = set()
+        # With SuperSpider's analysis (make regen) the leaders also include
+        # the addresses it knows control can arrive at indirectly
+        # ("ss_dispatch": entries, return sites, jump targets, roots).
+        L = set(self.j.get('ss_dispatch', ()))
         for a in self.code:
             w = self.word(a)
             if a in self.g.labels:
@@ -477,7 +483,9 @@ class Recomp:
 
 def main():
     opts = dict(x[2:].split('=', 1) if '=' in x else (x[2:], '1') for x in sys.argv[1:])
-    r = Recomp(loops='loops' in opts)
+    dyn = opts.get('dyn', ','.join(os.path.join(HERE, '..', 'asm', f) for f in ('dyn_menu.json', 'dyn_game.json')))
+    r = Recomp(opts.get('json', os.path.join(GH, 'galdan.json')), opts.get('tsvdir', os.path.join(GH, 'out')),
+               [d for d in dyn.split(',') if d], loops='loops' in opts)
     out = os.path.join(HERE, 'gen')
     os.makedirs(out, exist_ok=True)
     r.write(out, int(opts.get('files', 16)))

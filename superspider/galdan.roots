@@ -1,0 +1,9 @@
+# Extra SuperSpider entry points for galdan, one address per line ("make roots"
+# adds the gap entries a --trace-gaps run found).
+&265e4	# gap entry, from pc=&2613c LR=&0
+&2666c	# gap entry, from pc=&2613c LR=&0
+&266f0	# gap entry, from pc=&2613c LR=&0
+&26774	# gap entry, from pc=&2613c LR=&0
+&267f8	# gap entry, from pc=&2613c LR=&0
+&26878	# gap entry, from pc=&2613c LR=&0
+&268f8	# gap entry, from pc=&2613c LR=&0

@@ -35,10 +35,35 @@ galdan-cov: $(COVOBJ) FORCE
 cov.cov.o: $(COVDIR)/cov.c $(COVDIR)/cov.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+# Code/data analysis: SuperSpider (~/stuff/superspider, no Ghidra), into
+# ../superspider/out/, then gen_c.py. ../superspider/galdan.roots adds entry
+# points to the analysis: "make roots" merges the gap entries a --trace-gaps
+# run logged (untranslated.log, or LOG=...) into it, so the next "make regen"
+# translates them.
+SS      ?= $(HOME)/stuff/superspider
+SSBIN   := $(SS)/_build/default/bin/main.exe
+SSD     := ../superspider
+GALDAN  := ../extracted/GalacticDan_8000,ff8
+LOG     ?= untranslated.log
+
 regen:
+	cd $(SS) && dune build
+	mkdir -p $(SSD)/out/galdan
+	$(SSBIN) s1b $(GALDAN) 8000 --roots $(SSD)/galdan.roots -o $(SSD)/out/galdan.ss.json
+	python3 $(SS)/phase6/ss_to_spider.py $(SSD)/out/galdan.ss.json $(GALDAN) 8000 \
+	    $(SSD)/out/galdan.json $(SSD)/out/galdan ../ghidra
+	rm -rf gen
+	python3 gen_c.py --json=$(SSD)/out/galdan.json --tsvdir=$(SSD)/out/galdan --dyn=
+
+roots:
+	python3 $(SS)/tools/gap_roots.py $(GALDAN) 8000 $(SSD)/galdan.roots $(LOG)
+
+# The previous analysis: the spider + Ghidra (../ghidra/run_ghidra.sh) and
+# the run-time facts in ../asm/dyn_*.json.
+regen-ghidra:
 	python3 gen_c.py
 
 clean:
 	rm -f gen/*.o game.o galdan galdan-cov *.cov.o gen/*.cov.o
 
-.PHONY: FORCE cov regen clean
+.PHONY: FORCE cov regen regen-ghidra roots clean
