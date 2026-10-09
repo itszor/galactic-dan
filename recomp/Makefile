@@ -1,5 +1,5 @@
 # Static recompilation of Galactic Dan: the translated program (gen/, from
-# gen_c.py) and game.c, linked with libroger (the RISC OS runtime).
+# superspider analyse/gen) and game.c, linked with libroger (the RISC OS runtime).
 ROGER   ?= $(HOME)/stuff/libroger
 CC      ?= gcc
 CFLAGS  ?= -O2 -g -w -fno-strict-aliasing $(if $(TRACE),-DRECOMP_TRACE)
@@ -36,7 +36,7 @@ cov.cov.o: $(COVDIR)/cov.c $(COVDIR)/cov.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # Code/data analysis: SuperSpider (~/stuff/superspider, no Ghidra), into
-# ../superspider/out/, then gen_c.py. ../superspider/galdan.roots adds entry
+# ../superspider/out/galdan.json, then superspider gen. ../superspider/galdan.roots adds entry
 # points to the analysis: "make roots" merges the gap entries a --trace-gaps
 # run logged (untranslated.log, or LOG=...) into it, so the next "make regen"
 # translates them.
@@ -48,20 +48,19 @@ LOG     ?= untranslated.log
 
 regen:
 	cd $(SS) && dune build
-	mkdir -p $(SSD)/out/galdan
-	$(SSBIN) s1b $(GALDAN) 8000 --roots $(SSD)/galdan.roots -o $(SSD)/out/galdan.ss.json
-	python3 $(SS)/phase6/ss_to_spider.py $(SSD)/out/galdan.ss.json $(GALDAN) 8000 \
-	    $(SSD)/out/galdan.json $(SSD)/out/galdan ../ghidra
+	mkdir -p $(SSD)/out
+	$(SSBIN) analyse $(GALDAN) 8000 --full --roots $(SSD)/galdan.roots -o $(SSD)/out/galdan.json
 	rm -rf gen
-	python3 gen_c.py --json=$(SSD)/out/galdan.json --tsvdir=$(SSD)/out/galdan --dyn=
+	$(SSBIN) gen $(GALDAN) 8000 $(SSD)/out/galdan.json --c gen --leaders=dispatch --header=galdan --covtag=G
 
 roots:
 	python3 $(SS)/tools/gap_roots.py $(GALDAN) 8000 $(SSD)/galdan.roots $(LOG)
 
 # The previous analysis: the spider + Ghidra (../ghidra/run_ghidra.sh) and
-# the run-time facts in ../asm/dyn_*.json.
+# the run-time facts in ../asm/dyn_*.json, through the Python gen_c.py.
 regen-ghidra:
-	python3 gen_c.py
+	python3 $(SS)/tools/gen_c.py --img=$(GALDAN) --leaders=ss --header=galdan --covtag=G \
+	    --json=../ghidra/galdan.json --tsvdir=../ghidra/out --dyn=../asm/dyn_menu.json,../asm/dyn_game.json
 
 clean:
 	rm -f gen/*.o game.o galdan galdan-cov *.cov.o gen/*.cov.o
