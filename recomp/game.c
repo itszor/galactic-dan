@@ -5,6 +5,9 @@ extern const struct roger_image recomp_image;      /* gen/entries.c (gen_c.py) *
 
 static const char *const prefixes[] = {"<Obey$Dir>.", NULL};
 static const char *const loaders[] = {"!TitlePic", NULL};   /* !Run shows it before !RunImage */
+/* !Run's *Sets: the game loads its files along Disc1$Path (OS_File 14) and
+ * asks for the disc while that finds nothing */
+static const char *const variables[] = {"Disc1$Path", "<Obey$Dir>.", "Disc2$Path", "<Obey$Dir>.", NULL};
 
 /* the deterministic headless scenario (asm/emu.py SCENARIO): click at the
  * title screen, then press Space */
@@ -18,6 +21,7 @@ static const struct roger_config config = {
     .loader_programs = loaders,
     .appdir = "../extracted/!Galactic",
     .dir_prefixes = prefixes,
+    .variables = variables,
     .initial_mode = 13,
     .wimpslot = 640 * 1024,              /* !Run: wimpslot -min 640K -max 640K */
     .stack = 0xA8000,
