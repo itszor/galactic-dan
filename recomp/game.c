@@ -16,10 +16,10 @@ static const struct roger_key keys[] = {{99, 6500000, 6600000}};
 
 static const struct roger_config config = {
     .title = "Galactic Dan (recompiled)",
-    .image_path = "../extracted/GalacticDan_8000,ff8",
+    .image_path = "../game/GalacticDan_8000,ff8",
     .image = &recomp_image,
     .loader_programs = loaders,
-    .appdir = "../extracted/!Galactic",
+    .appdir = "../game/!Galactic",
     .dir_prefixes = prefixes,
     .variables = variables,
     .initial_mode = 13,

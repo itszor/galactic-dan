@@ -17,7 +17,7 @@ def fmt(a):
 def main():
     n = int(float(sys.argv[1]))
     prefix = sys.argv[2] if len(sys.argv) > 2 else 'ref'
-    img = open(os.path.join(os.path.dirname(__file__), '..', 'extracted', 'GalacticDan_8000,ff8'), 'rb').read()
+    img = open(os.path.join(os.path.dirname(__file__), '..', 'game', 'GalacticDan_8000,ff8'), 'rb').read()
     ros = emu.RiscOS(img, 0x8000, **emu.SCENARIO)
     a = ros.arm
     tf = None

@@ -5,10 +5,10 @@ sound stubs.  Used by difftest.py to compare two builds in lock-step.
 import os, sys, struct
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, '..', 'extracted', 'tools'))
+sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
 from arm2 import ARM, Stop, V_, C_          # noqa: E402
 
-APPDIR = os.path.join(HERE, '..', 'extracted', '!Galactic')
+APPDIR = os.path.join(HERE, '..', 'game', '!Galactic')
 SCREEN = 0x1C00000 - 0x80000          # 2 x 160K screen banks just below 28MB
 MEMSIZE = 0x1C00000
 RETURN_TO_OS = 0x3FFFFF0

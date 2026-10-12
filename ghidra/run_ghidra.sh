@@ -4,7 +4,7 @@
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 G=${GHIDRA:-/home/jules/stuff/ghidra/ghidra_12.1.3_PUBLIC}
-IMG="$HERE/../extracted/GalacticDan_8000,ff8"
+IMG="$HERE/../game/GalacticDan_8000,ff8"
 rm -rf "$HERE/project/GalacticDan.gpr" "$HERE/project/GalacticDan.rep"
 mkdir -p "$HERE/project" "$HERE/out"
 "$G/support/analyzeHeadless" "$HERE/project" GalacticDan \

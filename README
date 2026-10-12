@@ -1,10 +1,29 @@
 Galactic Dan (RISC OS, 1992) - reverse engineering and static recompilation
 ==========================================================================
 
-disk.img, *.adf/*.dsk   original and unprotected disc images
-extracted/              files from the disc; GalacticDan_8000,ff8 is the decrypted
-                        game (absolute, load/exec &8000); tools/ has the disc and
-                        protection tools and arm2.py (ARM2 emulator)
+A recipe: this repository holds no game data. It rebuilds the game from
+your own copy of the disc, recognised by content (recipe.json):
+
+    ./build.sh "Galactic Dan (19xx)(Fourth Dimension).adf"
+    cd recomp && ./galdan
+
+The disc can be the TOSEC dump (a cracked copy: its DAN is the game plus
+a 96-byte stub) or an unprotected disc made from an original by
+tools/mkunprotected.py (its !Runimage is the game). An original disc,
+protection and all, isn't enough on its own: its !Runimage is the
+protection's encrypted loader, which was run once (tools/run.py, under
+tools/arm2.py) to get the game; that isn't automated. build.sh runs
+recipe.json's steps with SuperSpider's tools/weave.py (~/stuff/superspider,
+or $SUPERSPIDER): it extracts the disc to extracted/disc and !Galactic to
+game/ (libroger's appdir), tools/game.py takes the game from it (checked
+against its sha256), then make regen and make. Needs python3, OCaml/dune,
+gcc and SDL3.
+
+game/                   !Galactic, and GalacticDan_8000,ff8, the decrypted game
+                        (absolute, load/exec &8000)
+tools/                  the disc and protection tools (adfsd.py: old-map ADFS;
+                        mkunprotected.py; run.py) and arm2.py (ARM2 emulator);
+                        game.py (above)
 ghidra/                 code/data classification and Ghidra import
                           spider.py         recursive-descent + speculative code finder
                           export_ghidra.py  spider -> galdan.json (+ .pickle cache)

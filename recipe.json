@@ -1,0 +1,95 @@
+{
+ "name": "galactic-dan",
+ "title": "Galactic Dan (The Fourth Dimension, 1992)",
+ "platform": "acorn-archimedes",
+ "doc": "A recipe: how to turn a user's own copy of the game into a native executable. It holds no game data: the inputs are recognised by content (see $SS/tools/weave.py).",
+ "inputs": {
+  "containers": {},
+  "formats": [
+   "adf",
+   "zip"
+  ]
+ },
+ "discs": [
+  {
+   "name": "disc",
+   "title": "Galactic Dan, without its protection: an unprotected disc (tools/mkunprotected.py), or the TOSEC dump (a cracked copy)",
+   "known_images": [
+    "9b20950a4ba327083db3933bef47a38abd6634a119dfb9fe84d8dde9861af37d"
+   ],
+   "key_files": {
+    "!Galactic/!Sprites": "4895fd8ed718c92f8d24b39c4635db27ad895557878ea44ea408e69904e5f6e0",
+    "!Galactic/!TitlePic": "3639f445cc535432471fa2b6637d5e63a7ee0d84e704fde1ff81f9500e44cc14",
+    "!Galactic/19-9-1992": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "!Galactic/Disc1": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "!Galactic/Sectors/Demo12": "cbe6adb6cb181624807ffc29388eab4eaad292a6442cf747f92587401c3a081e",
+    "!Galactic/Sectors/Demo17": "4eab1f7805aa24a0c647ff58b0f0bc680d1439b2157539f04be22a9db9e9d920",
+    "!Galactic/Sectors/Demo23": "d5b74d89bf39530c499c92432cca08b88bbb1f02f6d7c565475d96cca236c045",
+    "!Galactic/Sectors/Demo9": "4265fc64019ff059d8e2638443811b023c936b8ef15297f8104b122f8f325b7e",
+    "!Galactic/Sectors/Sector1": "b3deb5f6a0b1a9152c94a5f410e4cbc4bfd8a0a01df42cb4fe9f436281a8ec0b",
+    "!Galactic/Sectors/Sector10": "64b67b2347afb3688afbbf5b758b28c5f909132accbd06159305e448f27aa84a",
+    "!Galactic/Sectors/Sector11": "e17b447bf147a9504b34fb5d715add7996724f5a5a9ad62f70e46176464fb6b6",
+    "!Galactic/Sectors/Sector12": "73ca87b3e10add1aa94bfa34285fed1dfc32f1498c898f5ff1e59293b22a6ee9",
+    "!Galactic/Sectors/Sector13": "5a3ee7b234fa9a7496ee775e93b0506fd31fd3594d325cfa28ab05004a6e6913",
+    "!Galactic/Sectors/Sector14": "cbebc1ef66e002a35f78e2cb5fff9f52f747b4c8fe0c091d765aaa4cbee6a145",
+    "!Galactic/Sectors/Sector15": "ea35aa71e249fa8eaf9a47e667c7311b214c0b598132d594f02241b9921d8849",
+    "!Galactic/Sectors/Sector16": "08f4bec78ecdb2adce4c83f798955efaadb1b7d55fd292deba496a4e4c395bb7",
+    "!Galactic/Sectors/Sector17": "9e35e753b30af700db1bfb1bdd3f1c8353f234677e649b996d0ecd98bbf71b65",
+    "!Galactic/Sectors/Sector18": "21e6c010b053cb93dea17f83d7ce1f7303bc8469b5ddc2753186c2c680bdd12e",
+    "!Galactic/Sectors/Sector19": "f9706e91e72d100e350037defcc3ada9c4c45f13035fc81c64420744181cb152",
+    "!Galactic/Sectors/Sector2": "61c4ee55f8dd9949989ebf8d39853b6dbcfa7cec0f72603acf4b7cb5b9d13b9f",
+    "!Galactic/Sectors/Sector20": "7369284e12cd45129720bcb1c84ecda58414157fdf4d842325220170ba3fb246",
+    "!Galactic/Sectors/Sector21": "118a2639d34e19d148ca6481e1d750df732bd7a24f479c3b1c743dbf511b4026",
+    "!Galactic/Sectors/Sector22": "045213854b5fb7774c125eeea958a7c97938e7b403f0444c9a160773b05a7204",
+    "!Galactic/Sectors/Sector23": "d87417372a969446c7bcd8c1745c99d1bae776ac6f0400949dfc2eac3a03c4e9",
+    "!Galactic/Sectors/Sector24": "1202192fae2f6949731e36c7ce412feed02f02f3b15b3783492daa44fd72baee",
+    "!Galactic/Sectors/Sector3": "c70f80ec019d9ad3a1c7f56c7d565cfc0843e7ab040bd2965c4cf09e178c1540",
+    "!Galactic/Sectors/Sector4": "4f4cfc00d04bb44fde45a6b001f11414f5c4fdea806fa9a226b8755400d40570",
+    "!Galactic/Sectors/Sector5": "3754c67b7034a87009b6aebe091aa585e163328b159b10cf6b698709f6a80359",
+    "!Galactic/Sectors/Sector6": "d16fe0de314bbea44bcc824908c548052826037e2d86025ce92fd2589d496424",
+    "!Galactic/Sectors/Sector7": "2f481cc986c7a42dbc2895c9148bc603d876c5834f4e2a9596a3ebda2eaeec82",
+    "!Galactic/Sectors/Sector8": "3f8bf484bdc806d2d3702e4d52d7e80c3711ebe177d2e8d74c925c763184e0bb",
+    "!Galactic/Sectors/Sector9": "58513db897ba6cf88f0699c5d4bbd007f6e96017c58c469f5dc2933327004ef9",
+    "!Galactic/crystals": "249eed2e7df8cf56b0526c3f142f71d5314084815afe19e75524944b9bcbbb53",
+    "!Galactic/director": "def21dd3ec43bd41a9464e5cb909cd14122b1edf1a9196f36cc094a9a86a030a",
+    "!Galactic/eye": "5969aefd4fe01caf908086aee3317c067495f3cca513fde63c5b6e5de6d77633",
+    "!Galactic/lamp": "7321a282aba7a984fcae5d58a393f3c17f071b951acb11998279c7e4c3f320ff",
+    "!Galactic/memory": "ffa6c1ac819d8b49e66c1a0c43e48c57fb49359c30c315b6e00c184a789bcbb5",
+    "!Galactic/mine": "a2edd9aa9ab05fcdf3327a7d0f7aad66b510b67d400b488b6cc8d16e30e35ab5",
+    "!Galactic/miscspr": "22867a7808762527ae68750444dd62666f127e215e5d11e617a2c755280d2aa3",
+    "!Galactic/numbers": "d67742baab37eebff67d889413cf682c4c5ce54cd65bbc49da446140d7f96b40",
+    "!Galactic/octa": "5fe93b7f8ea78fb6e398c8eb4191f2e0d8675b2b464b063e9c33fadfaca47f8c",
+    "!Galactic/pogo": "e7302dfff1f285ba157f5e2025d6b4207cdae60315484fe3c4f9b91733921aac",
+    "!Galactic/robots": "1360735de4254a23eec56dd7de7cad111a3c8b7f68ba192c313315a9d3c0410d",
+    "!Galactic/rotor": "f025343df2971c937b7f7bfa2ba681eec9e8d1f537928f252da068245708733a",
+    "!Galactic/spider": "40c0abd3b063fd08fcfb808a43b9819eb8a3a17f4c3c4003cd68c107280bf538",
+    "!Galactic/swing": "495670074a61abd836e1820b6cadcba801437aa0f063e2d7c8909eadac676017",
+    "!Galactic/tree": "c2deff103cef3cabfee30a83b7e9edfc0dab14ae867c75d0fbe58614d5f7e045"
+   },
+   "game_dirs": [
+    "!Galactic"
+   ],
+   "variant_images": [
+    "56d8d6a75316c982dc8072382ae54cdee5a59f35dfef58f29729769f168af4f9"
+   ]
+  }
+ ],
+ "build": [
+  "python3 -I \"$WEAVE\" extract . INPUTS",
+  "python3 -I tools/game.py",
+  "make -C recomp regen",
+  "make -C recomp"
+ ],
+ "output": "recomp/galdan",
+ "requires": {
+  "superspider": "~/stuff/superspider, or $SUPERSPIDER (dune build): analyse, gen, tools/weave.py",
+  "libroger": "~/stuff/libroger, or make ROGER=...",
+  "host": [
+   "python3",
+   "ocaml + dune",
+   "gcc",
+   "SDL3 (pkg-config sdl3)"
+  ]
+ },
+ "run": "cd recomp && ./galdan"
+}

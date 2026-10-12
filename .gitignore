@@ -36,3 +36,14 @@ recomp/*.regs
 recomp/*.trace
 recomp/*.png
 recomp/screenshot-*.bmp
+
+# The original discs and everything made from them: build.sh (recipe.json)
+# remakes them from the user's own copy.
+*.adf
+*.dsk
+*.img
+*.zip
+x/
+extracted/
+game/
+asm/galdan.s

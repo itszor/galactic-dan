@@ -43,7 +43,7 @@ cov.cov.o: $(COVDIR)/cov.c $(COVDIR)/cov.h
 SS      ?= $(HOME)/stuff/superspider
 SSBIN   := $(SS)/_build/default/bin/main.exe
 SSD     := ../superspider
-GALDAN  := ../extracted/GalacticDan_8000,ff8
+GALDAN  := ../game/GalacticDan_8000,ff8
 LOG     ?= untranslated.log
 
 regen:

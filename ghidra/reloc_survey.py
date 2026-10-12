@@ -1,12 +1,12 @@
 import sys, os, json, pickle, collections, re, subprocess
 sys.path.insert(0, '.')
 import spider
-img = open('../extracted/GalacticDan_8000,ff8', 'rb').read(); base = 0x8000; end = base + len(img)
+img = open('../game/GalacticDan_8000,ff8', 'rb').read(); base = 0x8000; end = base + len(img)
 sp = pickle.load(open('galdan.json.pickle', 'rb'))
 code = set(sp.code)
 W = lambda a: int.from_bytes(img[a-base:a-base+4], 'little')
 dis = {}
-for line in subprocess.run(['arm-none-eabi-objdump','-z','-b','binary','-m','armv2a','-D','--adjust-vma=0x8000','../extracted/GalacticDan_8000,ff8'],capture_output=True,text=True).stdout.splitlines():
+for line in subprocess.run(['arm-none-eabi-objdump','-z','-b','binary','-m','armv2a','-D','--adjust-vma=0x8000','../game/GalacticDan_8000,ff8'],capture_output=True,text=True).stdout.splitlines():
     m = re.match(r'\s*([0-9a-f]+):\s+[0-9a-f]{8}\s+(.*)$', line)
     if m: dis[int(m.group(1),16)] = m.group(2).split('@')[0].strip()
 loads = collections.defaultdict(list)
