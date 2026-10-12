@@ -3,8 +3,7 @@ Galactic Dan - static recompilation to C
 
   python3 gen_c.py --loops     translate the ARM code -> gen/*.c   (< 1 s)
   make regen                   the same from SuperSpider's analysis
-                               (../superspider/out/; make regen-ghidra: the
-                               spider + Ghidra one in ../ghidra)
+                               (../superspider/out/)
   make roots [LOG=file]        merge a --trace-gaps run's gap entries
                                (untranslated.log) into ../superspider/galdan.roots
                                for the next make regen
@@ -35,7 +34,6 @@ Galactic Dan - static recompilation to C
 Files
   game.c       what the runtime needs to know about the game (struct
                roger_config: files, mode 13, the headless scenario, !TitlePic...)
-  gen_c.py     the translator (uses ../ghidra/gen_asm.py's final classification)
   The runtime itself - CPU state and instruction macros (roger_cpu.h),
   dispatcher, interrupts, fallback interpreter, the RISC OS emulation and the
   SDL front end - is libroger (~/stuff/libroger, or make ROGER=dir), shared

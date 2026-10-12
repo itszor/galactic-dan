@@ -24,14 +24,8 @@ game/                   !Galactic, and GalacticDan_8000,ff8, the decrypted game
 tools/                  the disc and protection tools (adfsd.py: old-map ADFS;
                         mkunprotected.py; run.py) and arm2.py (ARM2 emulator);
                         game.py (above)
-ghidra/                 code/data classification and Ghidra import
-                          spider.py         recursive-descent + speculative code finder
-                          export_ghidra.py  spider -> galdan.json (+ .pickle cache)
-                          run_ghidra.sh     headless Ghidra import/analysis/decompile
-                          gen_asm.py        galdan.json -> relocatable GNU as source
-asm/                    galdan.s: reassembles byte-identically (build.sh) and is
-                        relocatable; emu.py / provtrack.py / difftest.py verify it
-                        (see asm/README)
+asm/                    emu.py: minimal RISC OS around tools/arm2.py, the
+                        reference emulator recomp/compare.sh checks against
 recomp/                 static recompilation to C with an SDL3 front end
                         (see recomp/README):
                           python3 gen_c.py --loops && make -j8 && ./galdan

@@ -56,13 +56,7 @@ regen:
 roots:
 	python3 $(SS)/tools/gap_roots.py $(GALDAN) 8000 $(SSD)/galdan.roots $(LOG)
 
-# The previous analysis: the spider + Ghidra (../ghidra/run_ghidra.sh) and
-# the run-time facts in ../asm/dyn_*.json, through the Python gen_c.py.
-regen-ghidra:
-	python3 $(SS)/tools/gen_c.py --img=$(GALDAN) --leaders=ss --header=galdan --covtag=G \
-	    --json=../ghidra/galdan.json --tsvdir=../ghidra/out --dyn=../asm/dyn_menu.json,../asm/dyn_game.json
-
 clean:
 	rm -f gen/*.o game.o galdan galdan-cov *.cov.o gen/*.cov.o
 
-.PHONY: FORCE cov regen regen-ghidra roots clean
+.PHONY: FORCE cov regen roots clean

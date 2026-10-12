@@ -3,24 +3,10 @@ __pycache__/
 *.pyc
 *.swp
 
-# Ghidra database and headless output (./ghidra/run_ghidra.sh regenerates)
-ghidra/project/
-ghidra/out/galdan.c
-ghidra/out/headless.log
-ghidra/survey.txt
-ghidra/still.txt
-
 # SuperSpider analysis outputs (make regen in recomp/)
 superspider/out/
 
-# Reassembly products (asm/build.sh) and relocation-test builds (asm/regen.sh --pad=...)
-asm/galdan.o
-asm/galdan.elf
-asm/GalacticDan,ff8
-asm_shifted/
-asm_shifted2/
-
-# Emulator / difftest run outputs
+# Reference emulator run outputs
 asm/*.png
 asm/*.log
 asm/executed.json
@@ -46,4 +32,3 @@ recomp/screenshot-*.bmp
 x/
 extracted/
 game/
-asm/galdan.s

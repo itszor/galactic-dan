@@ -1,6 +1,7 @@
 """Minimal RISC OS environment around tools/arm2.py, enough to run Galactic
 Dan's start-up, title and early game: file loading, VDU variables, keyboard,
-sound stubs.  Used by difftest.py to compare two builds in lock-step.
+sound stubs.  recomp/ref_run.py runs it as the reference that compare.sh
+checks the recompiled game against.
 """
 import os, sys, struct
 
